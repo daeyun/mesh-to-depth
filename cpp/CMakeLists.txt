@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.1.3)
 project(mesh_to_depth)
 
 set(CMAKE_CXX_STANDARD 14)

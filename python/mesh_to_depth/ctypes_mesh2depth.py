@@ -9,21 +9,32 @@ from numpy.ctypeslib import ndpointer
 
 from mesh_to_depth import log
 
-ctypes_lib_dirname = path.realpath(path.join(path.dirname(__file__), '../../cpp/cmake-build-release/ctypes'))
+ctypes_lib_dirnames = [
+    path.realpath(path.dirname(__file__)),
+    path.realpath(path.join(path.dirname(__file__), '../../cpp/cmake-build-release/ctypes')),
+]
 
 lib = None
+
+
+def find_lib_file(basename):
+    for dirname in ctypes_lib_dirnames:
+        candidate = path.join(dirname, basename)
+        if path.isfile(candidate):
+            return candidate
+    log.error('Could not find {} in any of the following paths: \n{}'.format(basename, '\n'.join(ctypes_lib_dirnames)))
+
+
 if platform.startswith('linux'):
-    lib_filename = path.join(ctypes_lib_dirname, 'libmesh2depth.so')
+    lib_filename = find_lib_file('libmesh2depth.so')
 elif platform == "darwin":
-    lib_filename = path.join(ctypes_lib_dirname, 'libmesh2depth.dylib')
+    lib_filename = find_lib_file('libmesh2depth.dylib')
 else:
     raise NotImplemented(platform)
 
-if path.isfile(lib_filename):
+try:
     lib = cdll.LoadLibrary(lib_filename)
-else:
-    log.error('file does not exist: {}'.format(lib_filename))
-if lib:
+
     c_func = getattr(lib, '_meshgrid_debug')
     c_func.argtypes = [
         ctypes.c_size_t,  # num_images
@@ -37,7 +48,10 @@ if lib:
         ctypes.POINTER(ctypes.c_void_p),  # arr_ptr. Array of pointers.
         ctypes.c_size_t,  # size
     ]
-else:
+except Exception as ex:
+    import traceback
+
+    traceback.print_exc()
     log.error('External library not loaded correctly: {}'.format(lib_filename))
 
 
