@@ -1,0 +1,12 @@
+[submodule "cpp/third_party/repos/eigen"]
+	path = cpp/third_party/repos/eigen
+	url = https://gitlab.com/libeigen/eigen.git
+[submodule "cpp/third_party/repos/GSL"]
+	path = cpp/third_party/repos/GSL
+	url = https://github.com/microsoft/GSL.git
+[submodule "cpp/third_party/repos/spdlog"]
+	path = cpp/third_party/repos/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "cpp/third_party/repos/nanort"]
+	path = cpp/third_party/repos/nanort
+	url = git@github.com:daeyun/nanort.git
