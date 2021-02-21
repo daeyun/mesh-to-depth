@@ -2,6 +2,7 @@ import numpy as np
 from mesh_to_depth import ctypes_mesh2depth
 
 
+# Sanity check to make sure C++ integration works.
 def test_meshgrid():
     resolutions = [
         (12, 16),
