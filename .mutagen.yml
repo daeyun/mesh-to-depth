@@ -1,0 +1,26 @@
+# mutagen sync create -c .mutagen.yml --name=mesh-to-depth ~/git/mesh_to_depth dshin-lab:~/git/mesh_to_depth
+sync:
+    defaults:
+        mode: "one-way-safe"
+        ignore:
+            vcs: true
+            paths:
+                - "third_party/install"
+                - "cmake-build-debug/"
+                - "cmake-build-release/"
+                - "/build/"
+                - ".idea/"
+                - ".DS_Store"
+                - "__pycache__"
+                - ".eggs/"
+                - ".egg"
+                - ".pytest_cache"
+                - "*.py[cod]"
+                - "*.so"
+                - "*.so"
+                - "*.dylib"
+                - "downloads/"
+                - "venv/"
+                - "CMakeCache.txt"
+                - "CMakeFiles"
+                - ".tox"

@@ -23,6 +23,7 @@
 #include <gsl/gsl_assert>
 #include <Eigen/Dense>
 #include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 
 using Eigen::Matrix;
 using Eigen::MatrixXd;

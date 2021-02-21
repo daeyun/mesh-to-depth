@@ -1,3 +1,7 @@
 recursive-include cpp *
 recursive-exclude cpp/cmake-build* *
 recursive-exclude cpp/.idea *
+#recursive-exclude python/resources *
+#recursive-exclude cpp/third_party/repos *
+#global-exclude python/resources
+#global-exclude cpp/third_party/repos

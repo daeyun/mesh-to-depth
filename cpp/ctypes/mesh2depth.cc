@@ -3,6 +3,9 @@
 //
 
 #include <string>
+#include "lib/camera.h"
+#include "lib/ray_mesh_intersection.h"
+#include "lib/depth_tracer.h"
 //#include <omp.h>
 #include "lib/common.h"
 
@@ -68,6 +71,112 @@ void MeshToDepth(
     uint32_t **out_face_maps,  // Optional output. Dynamically allocated.
     int32_t **out_instance_maps  // Optional output. Dynamically allocated.
 ) {
+  // TODO(daeyun)
+}
+
+/**
+ * Generates depth maps from a mesh, representing visible surfaces.
+ *
+ * @param vertices An array of shape (num_vertices, 3) and type float32.
+ * @param num_vertices Number of vertices.
+ * @param faces An array of shape (num_faces, 3) and type uint32.
+ * @param num_faces Number of triangle mesh faces.
+ * @param camera_params An array of shape (num_cameras, 16) and type double.
+ *     Each row represents a perspective or orthographic camera:
+ *         cam_x, cam_y, cam_z,
+ *         lookat_x, lookat_y, lookat_z,
+ *         up_x, up_y, up_z,
+ *         is_perspective,
+ *         left, right, bottom, top, near, far
+ *
+ *     The first 9 parameters define the extrinsics of a camera. Same convention as [gluLookAt](https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluLookAt.xml).
+ *     is_perspective: Determines whether the frustum is perspective or orthographic. A non-zero value means perspective.
+ *     left, right, bottom, top, near, far: Define the intrinsics of a camera. Same convention as [glFrustum](https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glFrustum.xml) and [glOrtho](https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glOrtho.xml).
+ * @param num_cameras Number of cameras.
+ * @param render_params An array of shape (num_cameras, 3) and type double.
+ *     Row i contains the rendering parameters for the ith camera, casted to integer as needed:
+ *         image_height, image_width, is_depth
+ *     If is_depth is false, ray displacement (t) values will be used instead.
+ * @param out_depth_values A pointer array of shape (num_cameras,) and type float32*.
+ */
+void MeshToDepth_simple(
+    const float *vertices,
+    size_t num_vertices,
+    const uint32_t *faces,
+    size_t num_faces,
+    const double *camera_params,
+    size_t num_cameras,
+    const double *render_params,
+    float **out_depth_values  // Dynamically allocated.
+) {
+  std::vector<std::array<float, 3>> vertices_vector(num_vertices);
+  for (int i = 0; i < num_vertices; ++i) {
+    vertices_vector[i][0] = vertices[i * 3];
+    vertices_vector[i][1] = vertices[i * 3 + 1];
+    vertices_vector[i][2] = vertices[i * 3 + 2];
+  }
+
+  std::vector<std::array<unsigned int, 3>> faces_vector(num_faces);
+  for (int i = 0; i < num_faces; ++i) {
+    faces_vector[i][0] = faces[i * 3];
+    faces_vector[i][1] = faces[i * 3 + 1];
+    faces_vector[i][2] = faces[i * 3 + 2];
+  }
+  RayTracer ray_tracer(faces_vector, vertices_vector);
+
+  std::vector<std::unique_ptr<Camera>> cameras;
+  std::vector<std::array<size_t, 2>> height_width_vector;
+  std::vector<bool> is_depth_vector;
+  for (int i = 0; i < num_cameras; ++i) {
+    bool is_perspective = camera_params[i * 16 + 9] != 0;
+
+    // For now, only accept perspective cameras.
+    Expects(is_perspective);
+
+    unique_ptr<PerspectiveCamera> camera = std::make_unique<PerspectiveCamera>(
+        Vec3{camera_params[i * 16 + 0], camera_params[i * 16 + 1], camera_params[i * 16 + 2]},
+        Vec3{camera_params[i * 16 + 3], camera_params[i * 16 + 4], camera_params[i * 16 + 5]},
+        Vec3{camera_params[i * 16 + 6], camera_params[i * 16 + 7], camera_params[i * 16 + 8]},
+        FrustumParams{
+            .left = camera_params[i * 16 + 10],
+            .right = camera_params[i * 16 + 11],
+            .bottom = camera_params[i * 16 + 12],
+            .top = camera_params[i * 16 + 13],
+            .near = camera_params[i * 16 + 14],
+            .far = camera_params[i * 16 + 15],
+        }
+    );
+
+    cameras.push_back(move(camera));
+    height_width_vector.push_back({static_cast<size_t>(render_params[i * 3]), static_cast<size_t>(render_params[i * 3 + 1])});
+    is_depth_vector.push_back(render_params[i * 3 + 2] != 0);
+  }
+
+  for (int i = 0; i < num_cameras; ++i) {
+    const auto height = height_width_vector[i][0];
+    const auto width = height_width_vector[i][1];
+    const auto is_depth = is_depth_vector[i];
+
+    // We want to be able to call free() in `free_arrays()`.
+    out_depth_values[i] = static_cast<float *>(malloc(sizeof(float) * height * width));
+
+    SimpleMultiLayerDepthRenderer depth_renderer(&ray_tracer, cameras[i].get(), width, height);
+
+    for (int y = 0; y < height; ++y) {
+      for (int x = 0; x < width; ++x) {
+        float out_value;
+        uint32_t out_prim_id;
+        bool is_hit = depth_renderer.DepthValue(x, y, is_depth, &out_value, &out_prim_id);
+        if (is_hit) {
+          out_depth_values[i][y * width + x] = out_value;
+        } else {
+          out_depth_values[i][y * width + x] = std::numeric_limits<float>::quiet_NaN();
+        }
+      }
+    }
+
+  }
+
 }
 
 /**
@@ -118,7 +227,24 @@ void mesh2depth(
     uint32_t **out_face_maps,  // Optional output. Dynamically allocated.
     int32_t **out_instance_maps  // Optional output. Dynamically allocated.
 ) {
+  // TODO(daeyun): Not implemented yet.
   mesh_to_depth::MeshToDepth(vertices, num_vertices, faces, num_faces, face_instances, camera_params, num_cameras, render_params, out_ml_depth_values, out_pixel_num_layers, out_face_maps, out_instance_maps);
+}
+
+void mesh2depth_simple(
+    const float *vertices,
+    size_t num_vertices,
+    const uint32_t *faces,
+    size_t num_faces,
+    const double *camera_params,
+    size_t num_cameras,
+    const double *render_params,
+    float **out_depth_values  // Dynamically allocated.
+) {
+  if (spdlog::get("console") == nullptr) {
+    spdlog::stdout_color_mt("console");
+  }
+  mesh_to_depth::MeshToDepth_simple(vertices, num_vertices, faces, num_faces, camera_params, num_cameras, render_params, out_depth_values);
 }
 
 void _meshgrid_debug(

@@ -9,14 +9,14 @@
 
 namespace mesh_to_depth {
 
-class MultiLayerDepthTracer {
+class DepthTracer {
  public:
 
   // `ray_tracer` is managed externally.
-  MultiLayerDepthTracer(const RayTracer *ray_tracer,
-                        const Camera *camera,
-                        size_t width,
-                        size_t height)
+  DepthTracer(const RayTracer *ray_tracer,
+              const Camera *camera,
+              size_t width,
+              size_t height)
       : ray_tracer_(ray_tracer), camera_(camera), width_(width), height_(height) {
     if (camera_->is_perspective()) {
       double xf, yf;
@@ -74,9 +74,10 @@ class MultiLayerDepthTracer {
     return ray_direction;
   }
 
-  // Implementation specific.
-  virtual int DepthValues(int x, int y, vector<float> *out, vector<uint32_t> *prim_ids) const = 0;
-  virtual int ObjectCenteredRayDisplacement(int x, int y, vector<float> *out, vector<uint32_t> *prim_ids) const = 0;
+  // Implementation specific. If `is_depth` is false, ray displacement (t) value will be assigned to `out_depth` instead.
+  virtual bool DepthValue(int x, int y, bool is_depth, float *out_depth, uint32_t *out_prim_id) const = 0;
+//  virtual int DepthValues(int x, int y, vector<float> *out, vector<uint32_t> *prim_ids) const = 0;
+//  virtual int ObjectCenteredRayDisplacement(int x, int y, vector<float> *out, vector<uint32_t> *prim_ids) const = 0;
 
   size_t width() const {
     return width_;
@@ -112,14 +113,44 @@ class MultiLayerDepthTracer {
   Vec3 image_optical_center_;
 };
 
-class SimpleMultiLayerDepthRenderer : public MultiLayerDepthTracer {
+class SimpleMultiLayerDepthRenderer : public DepthTracer {
  public:
   SimpleMultiLayerDepthRenderer(const RayTracer *ray_tracer,
                                 const Camera *camera,
                                 size_t width,
                                 size_t height)
-      : MultiLayerDepthTracer(ray_tracer, camera, width, height) {}
+      : DepthTracer(ray_tracer, camera, width, height) {}
 
+  virtual bool DepthValue(int x, int y, bool is_depth, float *out_value, uint32_t *out_prim_id) const override {
+    const Vec3 ray_direction = this->RayDirection(x, y);
+    bool is_hit = false;
+
+    // Depth values are collected in the callback function, in the order traversed.
+    ray_tracer_->Traverse(this->RayOrigin(x, y), ray_direction, [&](float t, float u, float v, unsigned int prim_id) -> bool {
+      if (t > camera_->frustum().far) {
+        return false;
+      }
+      // TODO(daeyun): this is not efficient. better to move the ray origin.
+      if (t < camera_->frustum().near) {
+        return true;
+      }
+
+      *out_value = t;
+      *out_prim_id = prim_id;
+      is_hit = true;
+      return false;  // Stop at first hit.
+    });
+
+    if (is_depth) {
+      // Convert ray displacement to depth.
+      const float z = camera_->viewing_direction().dot(ray_direction);
+      *out_value *= z;
+    }
+
+    return is_hit;
+  }
+
+/* TODO(daeyun): WIP
   virtual int DepthValues(int x, int y, vector<float> *out_values, vector<uint32_t> *prim_ids) const override {
     Vec3 ray_direction = this->RayDirection(x, y);
 
@@ -140,6 +171,7 @@ class SimpleMultiLayerDepthRenderer : public MultiLayerDepthTracer {
 
     return count;
   }
+*/
 
 };
 }
