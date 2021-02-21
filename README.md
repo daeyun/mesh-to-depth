@@ -15,6 +15,9 @@ conda activate myproject
 pip install mesh-to-depth
 ```
 
+For other python versions and distributions,  you may have to compile from source.
+See [this page](https://pypi.org/project/mesh-to-depth/#files) for supported precompiled binaries.
+
 ## Example
 
 ```python
@@ -28,7 +31,7 @@ params.append({
     'x_fov': 0.349,  # End-to-end field of view in radians
     'near': 0.1, 'far': 10,
     'height': 240, 'width': 320,
-    'is_depth': True,  # If false, output a ray displacement map.
+    'is_depth': True,  # If false, output a ray displacement map, i.e. from the mesh surface to the camera center.
 })
 # Append more camera parameters if you want batch processing.
 
