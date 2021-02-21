@@ -6,7 +6,12 @@ Multi-layer depth map implementation **comping soon** (see [3D Scene Reconstruct
 
 ## Install
 
+Only tested on Python 3.6 and 3.7 on Ubuntu 18.04. Install in a conda environment, e.g.
+
 ```bash
+conda create -n myproject python=3.6
+conda activate myproject
+
 pip install mesh-to-depth
 ```
 
