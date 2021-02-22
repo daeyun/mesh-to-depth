@@ -89,7 +89,7 @@ extras = {
 
 setup(
     name='mesh-to-depth',
-    version='0.1',
+    version='0.1.2',
     author='Daeyun Shin',
     author_email=_email('daeyuns [at] uci.edu'),
     description='Generate depth maps, given a mesh and camera parameters',
