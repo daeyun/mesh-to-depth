@@ -1,6 +1,6 @@
 # mesh-to-depth
 
-Depth map generator written in C++ and Python. CPU-only.
+Depth map generator written from scratch in C++ and Python. CPU-only, self-contained, no external dependencies. Ideal for off-screen online depth data generation from meshes in Python scripts.
 
 Multi-layer depth map implementation **comping soon** (see [3D Scene Reconstruction with Multi-layer Depth and Epipolar Transformers](https://research.dshin.org/iccv19/multi-layer-depth/), ICCV 2019).
 
